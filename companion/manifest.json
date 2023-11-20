@@ -3,7 +3,7 @@
   "name": "pixelhue-fseries",
   "shortname": "pixelhue",
   "description": "Companion module for Pixelhue F Series",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "license": "MIT",
   "repository": "git+https://github.com/bitfocus/companion-module-pixelhue-fseries.git",
   "bugs": "https://github.com/bitfocus/companion-module-pixelhue-fseries/issues",
