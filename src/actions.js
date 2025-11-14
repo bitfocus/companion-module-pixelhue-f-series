@@ -1,188 +1,125 @@
-function get_preset_load_cmd(index) {
-  let preset_buf = []
-  let preset_buf_len = 0
-  let temp_index = index
-  // checksum = 0x5555 + all_part (no 0x55 0xaa)
-  let checksum = 0x645d
-  if (temp_index < 1 || temp_index > 128) {
-    console.log('error', 'Invalid temp_index, value=' + temp_index + ', use default value 1')
-    temp_index = 1 // Use default value 1
-  }
-  while (temp_index > 0) {
-    preset_buf[preset_buf_len] = Math.floor(temp_index % 10) + 0x30
-    checksum = checksum + preset_buf[preset_buf_len]
-    temp_index = Math.floor(temp_index / 10)
-    preset_buf_len = preset_buf_len + 1
-  }
-  let cmd_part1 = [],
-    cmd_part2 = [],
-    cmd_part3 = []
-  let cmd_part_len, cmd_part_xx, cmd_part_sum
-  cmd_part1 = Buffer.from([
-    0x55, 0xaa, 0x00, 0x7d, 0xfe, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x00, 0x00,
-  ])
-  cmd_part2 = Buffer.from([
-    0x00, 0x00, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5b,
-    0x7b, 0x22, 0x66, 0x69, 0x6c, 0x65, 0x49, 0x64, 0x22, 0x3a,
-  ])
-  cmd_part3 = Buffer.from([
-    0x2c, 0x22, 0x66, 0x69, 0x6c, 0x65, 0x54, 0x79, 0x70, 0x65, 0x22, 0x3a, 0x36, 0x2c, 0x22, 0x61, 0x70, 0x70, 0x6c,
-    0x79, 0x54, 0x79, 0x70, 0x65, 0x22, 0x3a, 0x30, 0x7d, 0x5d,
-  ])
+import {
+	COMMON_PRESET_TYPE,
+	Central_Control_Protocol_FTB,
+	Central_Control_Protocol_FREEZE,
+	CMD_DEVICES,
+	DEVICE_PRESETS,
+} from '../utils/constant.js'
+import { cmdActions } from '../utils/cmdActions.js'
 
-  switch (preset_buf_len) {
-    case 1:
-      checksum = checksum + 0x3b
-      cmd_part_len = Buffer.from([0x3b, 0x00])
-      cmd_part_xx = Buffer.from([preset_buf[0]])
-      break
-    case 2:
-      checksum = checksum + 0x3c
-      cmd_part_len = Buffer.from([0x3c, 0x00])
-      cmd_part_xx = Buffer.from([preset_buf[1], preset_buf[0]])
-      break
-    case 3:
-      checksum = checksum + 0x3d
-      cmd_part_len = Buffer.from([0x3d, 0x00])
-      cmd_part_xx = Buffer.from([preset_buf[2], preset_buf[1], preset_buf[0]])
-      break
-    default:
-      console.log('error', 'Invalid preset buf len!')
-  }
-  cmd_part_sum = Buffer.from([checksum & 0xff, (checksum >> 8) & 0xff])
+export const getActions = (instance) => {
+	const modelId = instance.config.modelId
 
-  let totalBytes =
-    cmd_part1.length +
-    cmd_part2.length +
-    cmd_part3.length +
-    cmd_part_len.length +
-    cmd_part_xx.length +
-    cmd_part_sum.length
-  let cmd = Buffer.concat([cmd_part1, cmd_part_len, cmd_part2, cmd_part_xx, cmd_part3, cmd_part_sum], totalBytes)
+	let actions = {}
 
-  return cmd
-}
+	actions['take'] = {
+		name: 'Execute Take on the selected screen',
+		options: [],
+		callback: async (event) => {
+			try {
+				cmdActions['take'].bind(instance)(event)
+			} catch (error) {
+				instance.log('error', 'take send error')
+			}
+		},
+	}
 
-exports.getActions = function (instance) {
-  let actions = {}
+	actions['cut'] = {
+		name: 'Execute Cut on the selected screen',
+		options: [],
+		callback: async (event) => {
+			try {
+				cmdActions['cut'].bind(instance)(event)
+			} catch (error) {
+				instance.log('error', 'cut send error')
+			}
+		},
+	}
 
-  actions['take'] = {
-    name: 'TAKE',
-    options: [],
-    callback: async (event) => {
-      try {
-        let cmd = Buffer.from([
-          0x55, 0xaa, 0x00, 0x6a, 0xfe, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x00, 0x00, 0xb5, 0x00,
-          0x00, 0x00, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00,
-          0x5b, 0x7b, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x49, 0x64, 0x22, 0x3a, 0x32, 0x35, 0x35, 0x2c, 0x22,
-          0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x22, 0x3a, 0x32, 0x2c, 0x22, 0x73, 0x77, 0x69,
-          0x74, 0x63, 0x68, 0x45, 0x66, 0x66, 0x65, 0x63, 0x74, 0x22, 0x3a, 0x7b, 0x22, 0x74, 0x69, 0x6d, 0x65, 0x22,
-          0x3a, 0x31, 0x2c, 0x22, 0x64, 0x69, 0x72, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x3a, 0x30, 0x2c, 0x22,
-          0x74, 0x79, 0x70, 0x65, 0x22, 0x3a, 0x31, 0x7d, 0x7d, 0x2c, 0x7b, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e,
-          0x49, 0x64, 0x22, 0x3a, 0x32, 0x35, 0x35, 0x2c, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x54, 0x79, 0x70,
-          0x65, 0x22, 0x3a, 0x34, 0x2c, 0x22, 0x73, 0x77, 0x69, 0x74, 0x63, 0x68, 0x45, 0x66, 0x66, 0x65, 0x63, 0x74,
-          0x22, 0x3a, 0x7b, 0x22, 0x74, 0x69, 0x6d, 0x65, 0x22, 0x3a, 0x31, 0x2c, 0x22, 0x64, 0x69, 0x72, 0x65, 0x63,
-          0x74, 0x69, 0x6f, 0x6e, 0x22, 0x3a, 0x30, 0x2c, 0x22, 0x74, 0x79, 0x70, 0x65, 0x22, 0x3a, 0x31, 0x7d, 0x7d,
-          0x5d, 0x59, 0x8d,
-        ])
-        await instance.socket.send(cmd)
-      } catch (error) {
-        instance.log('error', 'take cmd send error')
-      }
-    },
-  }
+	actions['ftb'] = {
+		name: 'Execute FTB on the selected screen',
+		options: [
+			{
+				type: 'dropdown',
+				name: 'FTB',
+				id: 'ftb',
+				default: '1',
+				choices: Central_Control_Protocol_FTB,
+			},
+		],
+		callback: async (event) => {
+			try {
+				cmdActions['ftb'].bind(instance)(event)
+			} catch (error) {
+				instance.log('error', 'FTB send error')
+			}
+		},
+	}
 
-  actions['cut'] = {
-    name: 'CUT',
-    options: [],
-    callback: async (event) => {
-      try {
-        let cmd = Buffer.from([
-          0x55, 0xaa, 0x00, 0x71, 0xfe, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x00, 0x00, 0xb5, 0x00,
-          0x00, 0x00, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0e, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00,
-          0x5b, 0x7b, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x49, 0x64, 0x22, 0x3a, 0x32, 0x35, 0x35, 0x2c, 0x22,
-          0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x22, 0x3a, 0x32, 0x2c, 0x22, 0x73, 0x77, 0x69,
-          0x74, 0x63, 0x68, 0x45, 0x66, 0x66, 0x65, 0x63, 0x74, 0x22, 0x3a, 0x7b, 0x22, 0x74, 0x69, 0x6d, 0x65, 0x22,
-          0x3a, 0x31, 0x2c, 0x22, 0x64, 0x69, 0x72, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x22, 0x3a, 0x30, 0x2c, 0x22,
-          0x74, 0x79, 0x70, 0x65, 0x22, 0x3a, 0x30, 0x7d, 0x7d, 0x2c, 0x7b, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e,
-          0x49, 0x64, 0x22, 0x3a, 0x32, 0x35, 0x35, 0x2c, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x54, 0x79, 0x70,
-          0x65, 0x22, 0x3a, 0x34, 0x2c, 0x22, 0x73, 0x77, 0x69, 0x74, 0x63, 0x68, 0x45, 0x66, 0x66, 0x65, 0x63, 0x74,
-          0x22, 0x3a, 0x7b, 0x22, 0x74, 0x69, 0x6d, 0x65, 0x22, 0x3a, 0x31, 0x2c, 0x22, 0x64, 0x69, 0x72, 0x65, 0x63,
-          0x74, 0x69, 0x6f, 0x6e, 0x22, 0x3a, 0x30, 0x2c, 0x22, 0x74, 0x79, 0x70, 0x65, 0x22, 0x3a, 0x30, 0x7d, 0x7d,
-          0x5d, 0x5e, 0x8d,
-        ])
-        await instance.socket.send(cmd)
-      } catch (error) {
-        instance.log('error', 'cut cmd send error')
-      }
-    },
-  }
+	actions['freeze'] = {
+		name: 'Execute Freeze on the selected screen ',
+		options: [
+			{
+				type: 'dropdown',
+				name: 'FRZ',
+				id: 'freeze',
+				default: '1',
+				choices: Central_Control_Protocol_FREEZE,
+			},
+		],
+		callback: async (event) => {
+			try {
+				cmdActions['freeze'].bind(instance)(event)
+			} catch (error) {
+				instance.log('error', 'FRZ send error')
+			}
+		},
+	}
 
-  actions['change_black'] = {
-    name: 'Change Black Screen',
-    options: [
-      {
-        type: 'dropdown',
-        name: 'Black Screen',
-        id: 'black',
-        default: '0',
-        choices: instance.CHOICES_BLACK,
-      },
-    ],
-    callback: async (event) => {
-      try {
-        let element = instance.model.black.find((element) => element.id === event.options.black)
-        await instance.socket.send(element.cmd)
-      } catch (error) {
-        instance.log('error', 'change_black cmd send error')
-      }
-    },
-  }
+	if (CMD_DEVICES.includes(modelId)) {
+		actions['presetType'] = {
+			name: 'Choose a destination to load the preset',
+			options: [
+				{
+					type: 'dropdown',
+					name: 'PVW/PGM',
+					id: 'presetType',
+					default: 'pvw',
+					choices: COMMON_PRESET_TYPE,
+				},
+			],
+			callback: async (event) => {
+				try {
+					cmdActions['presetType'].bind(instance)(event)
+				} catch (error) {
+					instance.log('error', 'presetType set error')
+				}
+			},
+		}
 
-  actions['change_freeze'] = {
-    name: 'Change Freeze Screen',
-    options: [
-      {
-        type: 'dropdown',
-        name: 'Freeze Screen',
-        id: 'freeze',
-        default: '0',
-        choices: instance.CHOICES_FREEZE,
-      },
-    ],
-    callback: async (event) => {
-      try {
-        let element = instance.model.freeze.find((element) => element.id === event.options.freeze)
-        await instance.socket.send(element.cmd)
-      } catch (error) {
-        instance.log('error', 'change_freeze cmd send error')
-      }
-    },
-  }
+		actions['preset'] = {
+			name: 'Select a preset to load',
+			options: [
+				{
+					type: 'dropdown',
+					name: 'Preset',
+					id: 'preset',
+					default: 1,
+					choices: [...Array(parseInt(DEVICE_PRESETS[modelId]) ?? 128)].map((_, index) => ({
+						id: index + 1,
+						label: `Preset ${index + 1}`,
+					})),
+				},
+			],
+			callback: async (event) => {
+				try {
+					cmdActions['preset'].bind(instance)(event)
+				} catch (error) {
+					instance.log('error', 'load_preset send error')
+				}
+			},
+		}
+	}
 
-  actions['load_preset'] = {
-    name: 'Load Preset to Preview',
-    options: [
-      {
-        type: 'dropdown',
-        name: 'Preset',
-        id: 'preset',
-        default: '0',
-        choices: [...Array(128)].map((_, index) => ({
-          id: index + 1,
-          label: `Preset ${index + 1}`,
-        })),
-      },
-    ],
-    callback: async (event) => {
-      try {
-        let cmd = get_preset_load_cmd(event.options.preset)
-        await instance.socket.send(cmd)
-      } catch (error) {
-        instance.log('error', 'load_preset cmd send error')
-      }
-    },
-  }
-
-  return actions
+	return actions
 }

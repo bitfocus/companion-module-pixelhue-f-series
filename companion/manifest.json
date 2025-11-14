@@ -1,32 +1,25 @@
 {
-  "id": "pixelhue-fseries",
-  "name": "pixelhue-fseries",
-  "shortname": "pixelhue",
-  "description": "Companion module for Pixelhue F Series",
-  "version": "1.0.0",
-  "license": "MIT",
-  "repository": "git+https://github.com/bitfocus/companion-module-pixelhue-fseries.git",
-  "bugs": "https://github.com/bitfocus/companion-module-pixelhue-fseries/issues",
-  "maintainers": [
-    {
-      "name": "Pixelhue",
-      "email": "service@pixelhue.com"
-    }
-  ],
-  "legacyIds": [],
-  "runtime": {
-    "type": "node18",
-    "api": "nodejs-ipc",
-    "apiVersion": "1.0.0",
-    "entrypoint": "../src/main.js"
-  },
-  "manufacturer": "Pixelhue",
-  "products": [
-    "F8",
-    "F4",
-    "F4 Lite"
-  ],
-  "keywords": [
-    "Presentation Switcher"
-  ]
+	"id": "pixelhue-fseries-switcher",
+	"name": "pixelhue-fseries-switcher",
+	"shortname": "pixelhue-fseries",
+	"description": "Companion module for Pixelhue F Series Switcher Devices (F4, F4 Lite, F8)",
+	"version": "1.0.0",
+	"license": "MIT",
+	"repository": "git+https://github.com/bitfocus/companion-module-pixelhue-fseries-switcher.git",
+	"bugs": "https://github.com/bitfocus/companion-module-pixelhue-fseries-switcher/issues",
+	"maintainers": [
+		{
+			"name": "Pixelhue",
+			"email": "service@pixelhue.com"
+		}
+	],
+	"runtime": {
+		"type": "node18",
+		"api": "nodejs-ipc",
+		"apiVersion": "0.0.0",
+		"entrypoint": "../src/main.js"
+	},
+	"manufacturer": "Pixelhue",
+	"products": ["F4", "F4Lite", "F8"],
+	"keywords": ["Pixelhue", "F Series"]
 }

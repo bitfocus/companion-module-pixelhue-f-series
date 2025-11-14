@@ -1,89 +1,25 @@
-const { InstanceBase, InstanceStatus, TCPHelper, UDPHelper, runEntrypoint } = require('@companion-module/base')
-const ping = require('ping')
-const actions = require('./actions')
-const presets = require('./presets')
+import { InstanceBase, InstanceStatus, TCPHelper, UDPHelper, Regex, runEntrypoint } from '@companion-module/base'
+import ping from 'ping'
 
-class PixelhueInstance extends InstanceBase {
+import { getActions } from './actions.js'
+import { getPresetDefinitions } from './presets.js'
+import { getFeedbacks } from './feedbacks.js'
+import { upgradeScripts } from './upgrades.js'
+import { getVaraiableDefinitions } from './variables.js'
+
+import { CMD_DEVICES, DEVICES_INFORMATION } from '../utils/constant.js'
+import { getSystemDeviceInfo } from '../utils/index.js'
+
+const LATCH_ACTIONS = ['ftb', 'freeze', 'presetType']
+class ModuleInstance extends InstanceBase {
 	constructor(internal) {
 		super(internal)
 
-		Object.assign(this, {
-			...actions,
-		})
+		this.DEVICES_INFO = getSystemDeviceInfo()
+		this.DEVICES = Object.values(this.DEVICES_INFO)
 
-		// F Series Display Modes
-		this.CHOICES_BLACK = [
-			{
-				id: '0',
-				label: 'No fade to black',
-				cmd: Buffer.from([
-					0x55, 0xaa, 0x00, 0xaf, 0xfe, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x00, 0x00, 0x8b, 0x00,
-					0x00, 0x00, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00,
-					0x5b, 0x7b, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x49, 0x64, 0x22, 0x3a, 0x32, 0x35, 0x35, 0x2c, 0x22,
-					0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x22, 0x3a, 0x32, 0x2c, 0x22, 0x46, 0x54, 0x42,
-					0x22, 0x3a, 0x7b, 0x22, 0x65, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x22, 0x3a, 0x30, 0x2c, 0x22, 0x74, 0x69, 0x6d,
-					0x65, 0x22, 0x3a, 0x30, 0x7d, 0x7d, 0x2c, 0x7b, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x49, 0x64, 0x22,
-					0x3a, 0x32, 0x35, 0x35, 0x2c, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x22, 0x3a,
-					0x34, 0x2c, 0x22, 0x46, 0x54, 0x42, 0x22, 0x3a, 0x7b, 0x22, 0x65, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x22, 0x3a,
-					0x30, 0x2c, 0x22, 0x74, 0x69, 0x6d, 0x65, 0x22, 0x3a, 0x30, 0x7d, 0x7d, 0x5d, 0x7a, 0x7d,
-				]),
-			},
-			{
-				id: '1',
-				label: 'Fade to black',
-				cmd: Buffer.from([
-					0x55, 0xaa, 0x00, 0x92, 0xfe, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x00, 0x00, 0x8b, 0x00,
-					0x00, 0x00, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0a, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00,
-					0x5b, 0x7b, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x49, 0x64, 0x22, 0x3a, 0x32, 0x35, 0x35, 0x2c, 0x22,
-					0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x22, 0x3a, 0x32, 0x2c, 0x22, 0x46, 0x54, 0x42,
-					0x22, 0x3a, 0x7b, 0x22, 0x65, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x22, 0x3a, 0x31, 0x2c, 0x22, 0x74, 0x69, 0x6d,
-					0x65, 0x22, 0x3a, 0x30, 0x7d, 0x7d, 0x2c, 0x7b, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x49, 0x64, 0x22,
-					0x3a, 0x32, 0x35, 0x35, 0x2c, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x22, 0x3a,
-					0x34, 0x2c, 0x22, 0x46, 0x54, 0x42, 0x22, 0x3a, 0x7b, 0x22, 0x65, 0x6e, 0x61, 0x62, 0x6c, 0x65, 0x22, 0x3a,
-					0x31, 0x2c, 0x22, 0x74, 0x69, 0x6d, 0x65, 0x22, 0x3a, 0x30, 0x7d, 0x7d, 0x5d, 0x5f, 0x7d,
-				]),
-			},
-		]
-		this.CHOICES_FREEZE = [
-			{
-				id: '0',
-				label: 'Unfreeze',
-				cmd: Buffer.from([
-					0x55, 0xaa, 0x00, 0xe5, 0xfe, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x00, 0x00, 0x69, 0x00,
-					0x00, 0x00, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00,
-					0x5b, 0x7b, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x49, 0x64, 0x22, 0x3a, 0x32, 0x35, 0x35, 0x2c, 0x22,
-					0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x22, 0x3a, 0x32, 0x2c, 0x22, 0x66, 0x72, 0x65,
-					0x65, 0x7a, 0x65, 0x22, 0x3a, 0x30, 0x7d, 0x2c, 0x7b, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x49, 0x64,
-					0x22, 0x3a, 0x32, 0x35, 0x35, 0x2c, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x22,
-					0x3a, 0x34, 0x2c, 0x22, 0x66, 0x72, 0x65, 0x65, 0x7a, 0x65, 0x22, 0x3a, 0x30, 0x7d, 0x5d, 0xae, 0x73,
-				]),
-			},
-			{
-				id: '1',
-				label: 'Freeze',
-				cmd: Buffer.from([
-					0x55, 0xaa, 0x00, 0xca, 0xfe, 0x00, 0x04, 0x00, 0x00, 0x00, 0x01, 0x30, 0x00, 0x00, 0x00, 0x00, 0x69, 0x00,
-					0x00, 0x00, 0x02, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x13, 0x00, 0x00, 0x00, 0x00, 0x00,
-					0x5b, 0x7b, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x49, 0x64, 0x22, 0x3a, 0x32, 0x35, 0x35, 0x2c, 0x22,
-					0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x22, 0x3a, 0x32, 0x2c, 0x22, 0x66, 0x72, 0x65,
-					0x65, 0x7a, 0x65, 0x22, 0x3a, 0x31, 0x7d, 0x2c, 0x7b, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x49, 0x64,
-					0x22, 0x3a, 0x32, 0x35, 0x35, 0x2c, 0x22, 0x73, 0x63, 0x72, 0x65, 0x65, 0x6e, 0x54, 0x79, 0x70, 0x65, 0x22,
-					0x3a, 0x34, 0x2c, 0x22, 0x66, 0x72, 0x65, 0x65, 0x7a, 0x65, 0x22, 0x3a, 0x31, 0x7d, 0x5d, 0xf2, 0x73,
-				]),
-			},
-		]
-
-		this.CONFIG_MODEL = {
-			f8: { id: 'f8', label: 'F8', black: this.CHOICES_BLACK, freeze: this.CHOICES_FREEZE },
-
-			f4: { id: 'f4', label: 'F4', black: this.CHOICES_BLACK, freeze: this.CHOICES_FREEZE },
-
-			f4lite: { id: 'f4lite', label: 'F4 Lite', black: this.CHOICES_BLACK, freeze: this.CHOICES_FREEZE },
-		}
-
-		this.CHOICES_MODEL = Object.values(this.CONFIG_MODEL)
 		// Sort alphabetical
-		this.CHOICES_MODEL.sort(function (a, b) {
+		this.DEVICES.sort(function (a, b) {
 			var x = a.label.toLowerCase()
 			var y = b.label.toLowerCase()
 			if (x < y) {
@@ -94,13 +30,15 @@ class PixelhueInstance extends InstanceBase {
 			}
 			return 0
 		})
-
-		this.lastState = 0 // used for ping checking, init to ok(0)
 	}
 
 	updateActions() {
 		this.log('debug', 'update actions....')
-		this.setActionDefinitions(actions.getActions(this))
+		this.setActionDefinitions(getActions(this))
+	}
+
+	updateFeedbacks() {
+		this.setFeedbackDefinitions(getFeedbacks(this))
 	}
 
 	// Return config fields for web config
@@ -112,7 +50,7 @@ class PixelhueInstance extends InstanceBase {
 				id: 'info',
 				width: 12,
 				label: 'Information',
-				value: 'This module will allow you to control the following Pixelhue products: F8, F4, F4 Lite.',
+				value: DEVICES_INFORMATION,
 			},
 			{
 				type: 'textinput',
@@ -120,21 +58,23 @@ class PixelhueInstance extends InstanceBase {
 				label: 'IP Address',
 				width: 6,
 				default: '192.168.0.10',
-				regex: this.REGEX_IP,
+				regex: Regex.IP,
+				required: true,
 			},
 			{
 				type: 'dropdown',
-				id: 'modelID',
+				id: 'modelId',
 				label: 'Model',
 				width: 6,
-				choices: this.CHOICES_MODEL,
-				default: 'f8',
+				choices: this.DEVICES,
+				default: this.DEVICES[0].id,
 			},
 		]
 	}
 
 	// When module gets deleted
 	async destroy() {
+		this.log('debug', 'destroy:' + this.id)
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 		}
@@ -145,16 +85,15 @@ class PixelhueInstance extends InstanceBase {
 			clearInterval(this.heartbeat)
 			delete this.heartbeat
 		}
-		this.log('destroy', this.id)
 	}
 
 	//update device status
 	updateDeviceStatus(isAlive) {
-		// this.log('debug', 'ping test:' + isAlive +", lastState:"+this.lastState)
+		this.log('debug', 'ping test:' + isAlive + ', lastState:' + this.lastState)
 		if (isAlive == true) {
-			// this.log('debug', 'ping check ok.')
+			this.log('debug', 'ping check ok.')
 			if (this.lastState !== 0) {
-				// this.log('info', 'connection recover, try to reconnect device.')
+				this.log('debug', 'connection recover, try to reconnect device.')
 				this.updateStatus(InstanceStatus.Connecting)
 				//try to reconnect
 				this.initUDP()
@@ -164,35 +103,14 @@ class PixelhueInstance extends InstanceBase {
 		} else {
 			if (isAlive == false && this.lastState === 0) {
 				this.updateStatus(InstanceStatus.ConnectionFailure)
-				this.log('info', 'ping check failure.')
+				this.log('debug', 'ping check failure.')
 				this.lastState = 1
 			}
 		}
 	}
+
 	pingTest() {
 		ping.sys.probe(this.config.host, (isAlive) => this.updateDeviceStatus(isAlive), { timeout: 1 })
-	}
-
-	async init(config) {
-		this.log('debug', 'init module config....')
-		this.config = config
-
-		if (this.config.modelID !== undefined) {
-			this.model = this.CONFIG_MODEL[this.config.modelID]
-		} else {
-			this.config.modelID = 'f8'
-			this.model = this.CONFIG_MODEL['f8']
-		}
-
-		this.updateActions()
-		
-		this.updateStatus(InstanceStatus.Connecting)
-		this.initUDP()
-		this.initTCP()
-
-		this.setPresetDefinitions(presets.getPresetDefinitions(this))
-
-		this.heartbeat = setInterval(() => this.pingTest(), 10000) //check every 10s
 	}
 
 	initTCP() {
@@ -201,28 +119,30 @@ class PixelhueInstance extends InstanceBase {
 			delete this.socket
 		}
 
-		if (this.config.port === undefined) {
-			this.config.port = 5400
-		}
+		this.config.port = 5400
 
 		if (this.config.host) {
 			this.socket = new TCPHelper(this.config.host, this.config.port)
 
 			this.socket.on('status_change', (status, message) => {
-				// this.status(status, message);
+				this.log('debug', `tcp-status-change, status: ${status}, msg: ${message}`)
+				this.updateStatus(status, message)
 			})
 
-			this.socket.on('error', (err) => {
+			this.socket.on('error', async (err) => {
 				this.updateStatus(InstanceStatus.ConnectionFailure)
-				this.log('error', 'Network error: ' + err.message)
-				console.log('TCP Connection error, Try to reconnect.')
+				this.log('debug', 'TCP Network error: ' + err.message)
 				this.updateStatus(InstanceStatus.Connecting)
 				if (this.udp !== undefined) {
 					let cmd_connect = Buffer.from([
 						0x72, 0x65, 0x71, 0x4e, 0x4f, 0x56, 0x41, 0x53, 0x54, 0x41, 0x52, 0x5f, 0x4c, 0x49, 0x4e, 0x4b, 0x3a, 0x00,
 						0x00, 0x03, 0xfe, 0xff,
 					]) // Port FFFE
-					this.udp.send(cmd_connect)
+					try {
+						await this.udp.send(cmd_connect)
+					} catch (e) {
+						this.log('debug', `UDP send Error.${e}`)
+					}
 				} else {
 					this.initUDP()
 				}
@@ -234,7 +154,7 @@ class PixelhueInstance extends InstanceBase {
 					0x57, 0x56,
 				])
 				this.socket.send(cmd)
-				this.log('debug', 'Connected')
+				this.log('debug', 'TCP Connected')
 				this.updateStatus(InstanceStatus.Ok)
 			})
 
@@ -249,7 +169,7 @@ class PixelhueInstance extends InstanceBase {
 		}
 	}
 
-	initUDP() {
+	async initUDP() {
 		if (this.udp !== undefined) {
 			this.udp.destroy()
 			delete this.udp
@@ -259,8 +179,7 @@ class PixelhueInstance extends InstanceBase {
 			this.udp = new UDPHelper(this.config.host, 3800)
 
 			this.udp.on('error', (err) => {
-				this.debug('Network error', err)
-				this.log('error', 'Network error: ' + err.message)
+				this.log('debug', 'UDP Network error: ' + err.message)
 				this.updateStatus(InstanceStatus.ConnectionFailure)
 			})
 
@@ -272,39 +191,86 @@ class PixelhueInstance extends InstanceBase {
 			this.udp.on('status_change', (status, message) => {
 				this.log('debug', 'UDP status_change: ' + status)
 			})
-			this.log('debug', 'initUDP finish')
 		} else {
 			this.log('error', 'No host configured')
 			this.updateStatus(InstanceStatus.BadConfig)
 		}
-		
+
 		if (this.udp !== undefined) {
 			let cmd_register = Buffer.from([
 				0x72, 0x65, 0x71, 0x4e, 0x4f, 0x56, 0x41, 0x53, 0x54, 0x41, 0x52, 0x5f, 0x4c, 0x49, 0x4e, 0x4b, 0x3a, 0x00,
 				0x00, 0x03, 0xfe, 0xff,
 			])
-			this.udp.send(cmd_register)
-			this.log('info', 'UDP registration.')
+			try {
+				await this.udp.send(cmd_register)
+			} catch (e) {
+				this.log('debug', `UDP send error.${e}`)
+			}
 		}
 	}
 
-	configUpdated(config) {
-		var resetConnection = false
+	updateDefaultInfo() {
+		LATCH_ACTIONS.map((item) => {
+			delete this.config[item]
+		})
+		this.updateActions()
+		this.updateFeedbacks()
+		this.setPresetDefinitions(getPresetDefinitions(this))
+		getVaraiableDefinitions(this)
+	}
 
-		if (this.config.host !== config.host) {
+	async configUpdated(config) {
+		this.log('debug', 'configUpdated modules...')
+		this.updateStatus(InstanceStatus.Connecting)
+		let resetConnection = false
+		if (this.config.host !== config.host || this.config.modelId !== config.modelId) {
 			resetConnection = true
 		}
+		delete this.config.token
+		delete this.config.sn
+		this.config = {
+			...this.config,
+			...config,
+			model: this.DEVICES_INFO[config.modelId],
+		}
+		this.updateDefaultInfo.bind(this)()
+		// 删除心跳
+		if (this.heartbeat) {
+			clearInterval(this.heartbeat)
+			delete this.heartbeat
+		}
 
-		this.config = config
+		const isRefresh = resetConnection === true || this.socket === undefined
+		if (!isRefresh) return
 
-		this.log('info', 'configUpdated module....')
+		this.initUDP()
+		this.initTCP()
+		this.heartbeat = setInterval(() => this.pingTest(), 10000) //check every 10s
 
-		if (resetConnection === true || this.socket === undefined) {
-			this.updateStatus(InstanceStatus.Connecting)
+		this.updateDefaultInfo.bind(this)()
+	}
+
+	async init(config) {
+		this.updateStatus(InstanceStatus.Connecting)
+
+		this.config = Object.assign({}, config)
+
+		if (this.config.modelId !== undefined) {
+			this.config.model = this.DEVICES_INFO[this.config.modelId]
+		} else {
+			this.config.modelId = this.DEVICES[0].id
+			this.config.model = this.DEVICES[0]
+		}
+
+		// 初始化并再次更新设备协议及设备状态
+		if (CMD_DEVICES.includes(this.config.modelId)) {
 			this.initUDP()
 			this.initTCP()
+			this.heartbeat = setInterval(() => this.pingTest(), 10000) //check every 10s
 		}
+
+		this.updateDefaultInfo.bind(this)()
 	}
 }
 
-runEntrypoint(PixelhueInstance, [])
+runEntrypoint(ModuleInstance, upgradeScripts)
