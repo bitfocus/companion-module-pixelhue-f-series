@@ -1,4 +1,4 @@
-# companion-module-pixelhue-fseries
+# companion-module-pixelhue-fseries-switcher
 
 See [HELP.md](./companion/HELP.md) and [LICENSE](./LICENSE)
 
@@ -27,4 +27,13 @@ This module will allow you to control the following Pixelhue products: F8, F4, F
 
 ### V1.0.0
 
-First version built for Companion 3.0
+- **Device Support**: F4, F4 Lite, and F8 switcher devices
+- **Basic Operations**: Take and Cut switching
+- **Advanced Features**: FTB (Fade to Black), Freeze, and Preset management (up to 240 presets)
+- **Preset Destination**: Load presets to PVW (Preview) or PGM (Program)
+- **Feedbacks**: FTB status, Freeze status, and PGM destination detection
+- **Network**: TCP (port 5400) and UDP (port 3800) communication with auto-reconnect
+- **Heartbeat**: Automatic connection monitoring every 10 seconds
+- **Presets**: Auto-generated preset buttons based on device model
+- **UI**: IP address validation and connection status display
+

@@ -1,9 +1,10 @@
-const { combineRgb } = require('@companion-module/base')
+import { combineRgb } from '@companion-module/base'
+import { CMD_DEVICES, DEVICE_PRESETS } from '../utils/constant.js'
 
-const basicPresets = {
+const displayPresets = {
 	take: {
 		type: 'button',
-		category: 'Basics',
+		category: 'Display',
 		name: 'TAKE',
 		style: {
 			text: 'TAKE',
@@ -25,7 +26,7 @@ const basicPresets = {
 	},
 	cut: {
 		type: 'button',
-		category: 'Basics',
+		category: 'Display',
 		name: 'CUT',
 		style: {
 			text: 'CUT',
@@ -45,26 +46,23 @@ const basicPresets = {
 		],
 		feedbacks: [],
 	},
-}
-
-const displayPresets = {
-	change_black: {
+	ftb: {
 		type: 'button',
 		category: 'Display',
-		name: 'Toggle FTB',
+		name: 'FTB',
 		style: {
-			text: 'Toggle FTB',
+			text: 'FTB',
 			size: '18',
 			color: combineRgb(255, 255, 255),
-			bgcolor: combineRgb(255, 0, 0),
+			bgcolor: combineRgb(0, 0, 0),
 		},
 		steps: [
 			{
 				down: [
 					{
-						actionId: 'change_black',
+						actionId: 'ftb',
 						options: {
-							black: '1',
+							ftb: '1',
 						},
 					},
 				],
@@ -72,31 +70,39 @@ const displayPresets = {
 			{
 				down: [
 					{
-						actionId: 'change_black',
+						actionId: 'ftb',
 						options: {
-							black: '0',
+							ftb: '0',
 						},
 					},
 				],
 			},
 		],
-		feedbacks: [],
+		feedbacks: [
+			{
+				feedbackId: 'ftb',
+				style: {
+					bgcolor: combineRgb(255, 0, 0),
+				},
+				options: {},
+			},
+		],
 	},
-	change_freeze: {
+	freeze: {
 		type: 'button',
 		category: 'Display',
-		name: 'Toggle Freeze',
+		name: 'Freeze',
 		style: {
-			text: 'Toggle Freeze',
+			text: 'Freeze',
 			size: '18',
 			color: combineRgb(255, 255, 255),
-			bgcolor: combineRgb(255, 0, 0),
+			bgcolor: combineRgb(0, 0, 0),
 		},
 		steps: [
 			{
 				down: [
 					{
-						actionId: 'change_freeze',
+						actionId: 'freeze',
 						options: {
 							freeze: '1',
 						},
@@ -106,7 +112,7 @@ const displayPresets = {
 			{
 				down: [
 					{
-						actionId: 'change_freeze',
+						actionId: 'freeze',
 						options: {
 							freeze: '0',
 						},
@@ -114,71 +120,102 @@ const displayPresets = {
 				],
 			},
 		],
-		feedbacks: [],
+		feedbacks: [
+			{
+				feedbackId: 'freeze',
+				style: {
+					bgcolor: combineRgb(255, 0, 0),
+				},
+				options: {},
+			},
+		],
 	},
 }
 
-const customPlayPresets = {
-	'preset-play': {
-		type: 'button',
-		category: 'Presets',
-		name: 'Preset',
-		style: {
-			text: 'Preset',
-			size: '18',
-			color: combineRgb(0, 0, 0),
-			bgcolor: combineRgb(255, 0, 255),
-		},
-		steps: [
-			{
-				down: [
-					{
-						actionId: 'load_preset',
-						options: {
-							preset: 0,
-						},
-					},
-				],
-			},
-		],
-		feedbacks: [],
+// presetType: 1: PGM, 0: PVW (cmd)
+const cmdPresetType = {
+	type: 'button',
+	category: 'Display',
+	name: 'presetType',
+	style: {
+		text: 'Load to\nPVW',
+		size: '18',
+		color: combineRgb(255, 255, 255),
+		bgcolor: combineRgb(0, 0, 0),
 	},
-}
-
-const playPresets = {}
-for (let i = 1; i <= 128; i++) {
-	const preset = {
-		type: 'button',
-		category: 'Presets',
-		name: 'Preset ' + i,
-		style: {
-			text: 'Preset\\n' + i,
-			size: '18',
-			color: combineRgb(0, 0, 0),
-			bgcolor: combineRgb(0, 255, 0),
-		},
-		steps: [
-			{
-				down: [
-					{
-						actionId: 'load_preset',
-						options: {
-							preset: i,
-						},
+	steps: [
+		{
+			down: [
+				{
+					actionId: 'presetType',
+					options: {
+						presetType: 'pgm',
 					},
-				],
+				},
+			],
+		},
+		{
+			down: [
+				{
+					actionId: 'presetType',
+					options: {
+						presetType: 'pvw',
+					},
+				},
+			],
+		},
+	],
+	feedbacks: [
+		{
+			feedbackId: 'pgm',
+			style: {
+				bgcolor: combineRgb(255, 0, 0),
+				text: 'Load to\nPGM',
 			},
-		],
-		feedbacks: [],
-	}
-	playPresets['preset-play' + i] = preset
+			options: {},
+		},
+	],
 }
 
-exports.getPresetDefinitions = function () {
-	return {
-		...basicPresets,
-		...displayPresets,
-		...customPlayPresets,
-		...playPresets,
+// F系列场景
+const getFseriesPresets = (num) => {
+	const playPresets = {}
+	for (let i = 1; i <= num; i++) {
+		const preset = {
+			type: 'button',
+			category: 'Presets',
+			name: 'Preset ' + i,
+			style: {
+				text: 'Preset \n' + i,
+				size: '18',
+				color: combineRgb(0, 0, 0),
+				bgcolor: combineRgb(0, 255, 0),
+			},
+			steps: [
+				{
+					down: [
+						{
+							actionId: 'preset',
+							options: {
+								preset: i,
+							},
+						},
+					],
+				},
+			],
+			feedbacks: [],
+		}
+		playPresets['preset-play' + i] = preset
 	}
+	return playPresets
+}
+
+export const getPresetDefinitions = function (instance) {
+	let basicPresets = {}
+	// F系列场景生成
+	const presetNum = parseInt(DEVICE_PRESETS[instance.config.modelId]) ?? 128
+	const fSeriesPresets = getFseriesPresets(presetNum)
+	basicPresets = { ...displayPresets, cmdPresetType, ...fSeriesPresets }
+
+	return basicPresets
 }
