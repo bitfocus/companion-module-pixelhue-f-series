@@ -1,12 +1,12 @@
 {
-	"id": "pixelhue-fseries-switcher",
-	"name": "pixelhue-fseries-switcher",
-	"shortname": "pixelhue-fseries",
+	"id": "pixelhue-f-series",
+	"name": "pixelhue-f-series",
+	"shortname": "pixelhue-f-series",
 	"description": "Companion module for Pixelhue F Series Switcher Devices (F4, F4 Lite, F8)",
 	"version": "1.0.0",
 	"license": "MIT",
-	"repository": "git+https://github.com/bitfocus/companion-module-pixelhue-fseries-switcher.git",
-	"bugs": "https://github.com/bitfocus/companion-module-pixelhue-fseries-switcher/issues",
+	"repository": "git+https://github.com/bitfocus/companion-module-pixelhue-f-series.git",
+	"bugs": "https://github.com/bitfocus/companion-module-pixelhue-f-series/issues",
 	"maintainers": [
 		{
 			"name": "Pixelhue",
@@ -19,6 +19,7 @@
 		"apiVersion": "0.0.0",
 		"entrypoint": "../src/main.js"
 	},
+	"legacyIds": ["F4", "F4Lite", "F8"],
 	"manufacturer": "Pixelhue",
 	"products": ["F4", "F4Lite", "F8"],
 	"keywords": ["Pixelhue", "F Series"]
