@@ -4,6 +4,12 @@ See [HELP.md](./companion/HELP.md) and [LICENSE](./LICENSE)
 
 This module will allow you to control the following Pixelhue products: F8, F4, F4 Lite.
 
+**Supported Device Versions:**
+
+- F4: V2.4.2.0.STD
+- F8: V2.4.2.0.STD
+- F4 Lite: V3.2.4.0.STD
+
 ## File Structure
 
 ```
@@ -36,4 +42,3 @@ This module will allow you to control the following Pixelhue products: F8, F4, F
 - **Heartbeat**: Automatic connection monitoring every 10 seconds
 - **Presets**: Auto-generated preset buttons based on device model
 - **UI**: IP address validation and connection status display
-
