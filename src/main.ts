@@ -1,18 +1,40 @@
-import { InstanceBase, InstanceStatus, TCPHelper, UDPHelper, Regex, runEntrypoint } from '@companion-module/base'
+import {
+	InstanceBase,
+	InstanceStatus,
+	TCPHelper,
+	UDPHelper,
+	Regex,
+	runEntrypoint,
+	type SomeCompanionConfigField,
+} from '@companion-module/base'
 import ping from 'ping'
 
+import type { ModuleConfig, DeviceModel } from './types.js'
 import { getActions } from './actions.js'
 import { getPresetDefinitions } from './presets.js'
 import { getFeedbacks } from './feedbacks.js'
-import { upgradeScripts } from './upgrades.js'
-import { getVaraiableDefinitions } from './variables.js'
+import { UpgradeScripts } from './upgrades.js'
+import { getVariableDefinitions } from './variables.js'
 
-import { CMD_DEVICES, DEVICES_INFORMATION } from '../utils/constant.js'
-import { getSystemDeviceInfo } from '../utils/index.js'
+import { CMD_DEVICES, DEVICES_INFORMATION } from './utils/constant.js'
+import { getSystemDeviceInfo } from './utils/index.js'
 
 const LATCH_ACTIONS = ['ftb', 'freeze', 'presetType']
-class ModuleInstance extends InstanceBase {
-	constructor(internal) {
+
+class ModuleInstance extends InstanceBase<ModuleConfig> {
+	public config: ModuleConfig = {
+		host: '',
+		modelId: '',
+	}
+
+	private DEVICES_INFO: Record<string, DeviceModel> = {}
+	private DEVICES: DeviceModel[] = []
+	public socket?: TCPHelper
+	public udp?: UDPHelper
+	private heartbeat?: NodeJS.Timeout
+	private lastState: number = 0
+
+	constructor(internal: unknown) {
 		super(internal)
 
 		this.DEVICES_INFO = getSystemDeviceInfo()
@@ -20,8 +42,8 @@ class ModuleInstance extends InstanceBase {
 
 		// Sort alphabetical
 		this.DEVICES.sort(function (a, b) {
-			var x = a.label.toLowerCase()
-			var y = b.label.toLowerCase()
+			const x = a.label.toLowerCase()
+			const y = b.label.toLowerCase()
 			if (x < y) {
 				return -1
 			}
@@ -32,18 +54,16 @@ class ModuleInstance extends InstanceBase {
 		})
 	}
 
-	updateActions() {
+	private updateActions(): void {
 		this.log('debug', 'update actions....')
 		this.setActionDefinitions(getActions(this))
 	}
 
-	updateFeedbacks() {
+	private updateFeedbacks(): void {
 		this.setFeedbackDefinitions(getFeedbacks(this))
 	}
 
-	// Return config fields for web config
-	getConfigFields() {
-		this.log('getting the fields....')
+	public override getConfigFields(): SomeCompanionConfigField[] {
 		return [
 			{
 				type: 'static-text',
@@ -66,14 +86,13 @@ class ModuleInstance extends InstanceBase {
 				id: 'modelId',
 				label: 'Model',
 				width: 6,
-				choices: this.DEVICES,
-				default: this.DEVICES[0].id,
+				choices: this.DEVICES.map((device) => ({ id: device.id, label: device.label })),
+				default: this.DEVICES[0]?.id ?? 'f4',
 			},
 		]
 	}
 
-	// When module gets deleted
-	async destroy() {
+	public override async destroy(): Promise<void> {
 		this.log('debug', 'destroy:' + this.id)
 		if (this.socket !== undefined) {
 			this.socket.destroy()
@@ -87,10 +106,9 @@ class ModuleInstance extends InstanceBase {
 		}
 	}
 
-	//update device status
-	updateDeviceStatus(isAlive) {
+	private updateDeviceStatus(isAlive: boolean): void {
 		this.log('debug', 'ping test:' + isAlive + ', lastState:' + this.lastState)
-		if (isAlive == true) {
+		if (isAlive === true) {
 			this.log('debug', 'ping check ok.')
 			if (this.lastState !== 0) {
 				this.log('debug', 'connection recover, try to reconnect device.')
@@ -101,7 +119,7 @@ class ModuleInstance extends InstanceBase {
 				this.lastState = 0
 			}
 		} else {
-			if (isAlive == false && this.lastState === 0) {
+			if (isAlive === false && this.lastState === 0) {
 				this.updateStatus(InstanceStatus.ConnectionFailure)
 				this.log('debug', 'ping check failure.')
 				this.lastState = 1
@@ -109,11 +127,11 @@ class ModuleInstance extends InstanceBase {
 		}
 	}
 
-	pingTest() {
-		ping.sys.probe(this.config.host, (isAlive) => this.updateDeviceStatus(isAlive), { timeout: 1 })
+	private pingTest(): void {
+		ping.sys.probe(this.config.host, (isAlive: boolean) => this.updateDeviceStatus(isAlive), { timeout: 1 })
 	}
 
-	initTCP() {
+	private initTCP(): void {
 		if (this.socket !== undefined) {
 			this.socket.destroy()
 			delete this.socket
@@ -134,7 +152,7 @@ class ModuleInstance extends InstanceBase {
 				this.log('debug', 'TCP Network error: ' + err.message)
 				this.updateStatus(InstanceStatus.Connecting)
 				if (this.udp !== undefined) {
-					let cmd_connect = Buffer.from([
+					const cmd_connect = Buffer.from([
 						0x72, 0x65, 0x71, 0x4e, 0x4f, 0x56, 0x41, 0x53, 0x54, 0x41, 0x52, 0x5f, 0x4c, 0x49, 0x4e, 0x4b, 0x3a, 0x00,
 						0x00, 0x03, 0xfe, 0xff,
 					]) // Port FFFE
@@ -149,17 +167,17 @@ class ModuleInstance extends InstanceBase {
 			})
 
 			this.socket.on('connect', () => {
-				let cmd = Buffer.from([
+				const cmd = Buffer.from([
 					0x55, 0xaa, 0x00, 0x00, 0xfe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x02, 0x00,
 					0x57, 0x56,
 				])
-				this.socket.send(cmd)
+				this.socket?.send(cmd)
 				this.log('debug', 'TCP Connected')
 				this.updateStatus(InstanceStatus.Ok)
 			})
 
 			// if we get any data, display it to stdout
-			this.socket.on('data', (buffer) => {
+			this.socket.on('data', () => {
 				//future feedback can be added here
 				// this.log('debug', 'Tcp recv:' + buffer);
 			})
@@ -169,7 +187,7 @@ class ModuleInstance extends InstanceBase {
 		}
 	}
 
-	async initUDP() {
+	private async initUDP(): Promise<void> {
 		if (this.udp !== undefined) {
 			this.udp.destroy()
 			delete this.udp
@@ -188,7 +206,7 @@ class ModuleInstance extends InstanceBase {
 				// this.status(this.STATE_WARNING, 'Connecting...')
 			})
 
-			this.udp.on('status_change', (status, message) => {
+			this.udp.on('status_change', (status) => {
 				this.log('debug', 'UDP status_change: ' + status)
 			})
 		} else {
@@ -197,7 +215,7 @@ class ModuleInstance extends InstanceBase {
 		}
 
 		if (this.udp !== undefined) {
-			let cmd_register = Buffer.from([
+			const cmd_register = Buffer.from([
 				0x72, 0x65, 0x71, 0x4e, 0x4f, 0x56, 0x41, 0x53, 0x54, 0x41, 0x52, 0x5f, 0x4c, 0x49, 0x4e, 0x4b, 0x3a, 0x00,
 				0x00, 0x03, 0xfe, 0xff,
 			])
@@ -209,17 +227,17 @@ class ModuleInstance extends InstanceBase {
 		}
 	}
 
-	updateDefaultInfo() {
+	private updateDefaultInfo(): void {
 		LATCH_ACTIONS.map((item) => {
-			delete this.config[item]
+			delete this.config[item as keyof ModuleConfig]
 		})
 		this.updateActions()
 		this.updateFeedbacks()
 		this.setPresetDefinitions(getPresetDefinitions(this))
-		getVaraiableDefinitions(this)
+		getVariableDefinitions(this)
 	}
 
-	async configUpdated(config) {
+	public override async configUpdated(config: ModuleConfig): Promise<void> {
 		this.log('debug', 'configUpdated modules...')
 		this.updateStatus(InstanceStatus.Connecting)
 		let resetConnection = false
@@ -234,7 +252,7 @@ class ModuleInstance extends InstanceBase {
 			model: this.DEVICES_INFO[config.modelId],
 		}
 		this.updateDefaultInfo.bind(this)()
-		// 删除心跳
+		// Clear heartbeat timer
 		if (this.heartbeat) {
 			clearInterval(this.heartbeat)
 			delete this.heartbeat
@@ -250,7 +268,7 @@ class ModuleInstance extends InstanceBase {
 		this.updateDefaultInfo.bind(this)()
 	}
 
-	async init(config) {
+	public override async init(config: ModuleConfig): Promise<void> {
 		this.updateStatus(InstanceStatus.Connecting)
 
 		this.config = Object.assign({}, config)
@@ -258,11 +276,11 @@ class ModuleInstance extends InstanceBase {
 		if (this.config.modelId !== undefined) {
 			this.config.model = this.DEVICES_INFO[this.config.modelId]
 		} else {
-			this.config.modelId = this.DEVICES[0].id
+			this.config.modelId = this.DEVICES[0]?.id ?? 'f4'
 			this.config.model = this.DEVICES[0]
 		}
 
-		// 初始化并再次更新设备协议及设备状态
+		// Initialize and refresh device protocol/state
 		if (CMD_DEVICES.includes(this.config.modelId)) {
 			this.initUDP()
 			this.initTCP()
@@ -273,4 +291,4 @@ class ModuleInstance extends InstanceBase {
 	}
 }
 
-runEntrypoint(ModuleInstance, upgradeScripts)
+runEntrypoint(ModuleInstance, UpgradeScripts)

@@ -31,6 +31,12 @@ This module will allow you to control the following Pixelhue products: F8, F4, F
 
 ## Changelog
 
+### V1.1.0
+
+- **Maintenance**: Project structure and tooling updates
+- **Quality**: Lint/format configuration adjustments
+
+
 ### V1.0.0
 
 - **Device Support**: F4, F4 Lite, and F8 switcher devices

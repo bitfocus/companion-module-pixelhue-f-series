@@ -1,7 +1,8 @@
 import { combineRgb } from '@companion-module/base'
-import { CMD_DEVICES, DEVICE_PRESETS } from '../utils/constant.js'
+import type { ModuleInstanceInterface, ModulePresets } from './types.js'
+import { DEVICE_PRESETS } from './utils/constant.js'
 
-const displayPresets = {
+const displayPresets: ModulePresets = {
 	take: {
 		type: 'button',
 		category: 'Display',
@@ -20,6 +21,7 @@ const displayPresets = {
 						options: {},
 					},
 				],
+				up: [],
 			},
 		],
 		feedbacks: [],
@@ -42,6 +44,7 @@ const displayPresets = {
 						options: {},
 					},
 				],
+				up: [],
 			},
 		],
 		feedbacks: [],
@@ -52,7 +55,7 @@ const displayPresets = {
 		name: 'FTB',
 		style: {
 			text: 'FTB',
-			size: '18',
+			size: 18,
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 0, 0),
 		},
@@ -66,6 +69,7 @@ const displayPresets = {
 						},
 					},
 				],
+				up: [],
 			},
 			{
 				down: [
@@ -76,6 +80,7 @@ const displayPresets = {
 						},
 					},
 				],
+				up: [],
 			},
 		],
 		feedbacks: [
@@ -94,7 +99,7 @@ const displayPresets = {
 		name: 'Freeze',
 		style: {
 			text: 'Freeze',
-			size: '18',
+			size: 18,
 			color: combineRgb(255, 255, 255),
 			bgcolor: combineRgb(0, 0, 0),
 		},
@@ -108,6 +113,7 @@ const displayPresets = {
 						},
 					},
 				],
+				up: [],
 			},
 			{
 				down: [
@@ -118,6 +124,7 @@ const displayPresets = {
 						},
 					},
 				],
+				up: [],
 			},
 		],
 		feedbacks: [
@@ -133,13 +140,13 @@ const displayPresets = {
 }
 
 // presetType: 1: PGM, 0: PVW (cmd)
-const cmdPresetType = {
+const cmdPresetType: ModulePresets[string] = {
 	type: 'button',
 	category: 'Display',
 	name: 'presetType',
 	style: {
 		text: 'Load to\nPVW',
-		size: '18',
+		size: 18,
 		color: combineRgb(255, 255, 255),
 		bgcolor: combineRgb(0, 0, 0),
 	},
@@ -153,6 +160,7 @@ const cmdPresetType = {
 					},
 				},
 			],
+			up: [],
 		},
 		{
 			down: [
@@ -163,6 +171,7 @@ const cmdPresetType = {
 					},
 				},
 			],
+			up: [],
 		},
 	],
 	feedbacks: [
@@ -177,17 +186,17 @@ const cmdPresetType = {
 	],
 }
 
-// F系列场景
-const getFseriesPresets = (num) => {
-	const playPresets = {}
+// F-series scenes
+function getFseriesPresets(num: number): ModulePresets {
+	const playPresets: ModulePresets = {}
 	for (let i = 1; i <= num; i++) {
 		const preset = {
-			type: 'button',
+			type: 'button' as const,
 			category: 'Presets',
 			name: 'Preset ' + i,
 			style: {
 				text: 'Preset \n' + i,
-				size: '18',
+				size: 18,
 				color: combineRgb(0, 0, 0),
 				bgcolor: combineRgb(0, 255, 0),
 			},
@@ -201,6 +210,7 @@ const getFseriesPresets = (num) => {
 							},
 						},
 					],
+					up: [],
 				},
 			],
 			feedbacks: [],
@@ -210,10 +220,9 @@ const getFseriesPresets = (num) => {
 	return playPresets
 }
 
-export const getPresetDefinitions = function (instance) {
-	let basicPresets = {}
-	// F系列场景生成
-	const presetNum = parseInt(DEVICE_PRESETS[instance.config.modelId]) ?? 128
+export function getPresetDefinitions(instance: ModuleInstanceInterface): ModulePresets {
+	let basicPresets: ModulePresets = {}
+	const presetNum = DEVICE_PRESETS[instance.config.modelId] ?? 128
 	const fSeriesPresets = getFseriesPresets(presetNum)
 	basicPresets = { ...displayPresets, cmdPresetType, ...fSeriesPresets }
 

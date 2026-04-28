@@ -1,8 +1,9 @@
 import { combineRgb } from '@companion-module/base'
-import { FTB_STATUES, FREEZE_STATUES } from '../utils/constant.js'
+import type { ModuleInstanceInterface, ModuleFeedbacks } from './types.js'
+import { FTB_STATUES, FREEZE_STATUES } from './utils/constant.js'
 
-export const getFeedbacks = (instance) => {
-	let feedbacks = {}
+export function getFeedbacks(instance: ModuleInstanceInterface): ModuleFeedbacks {
+	const feedbacks: ModuleFeedbacks = {}
 
 	feedbacks['ftb'] = {
 		type: 'boolean',
