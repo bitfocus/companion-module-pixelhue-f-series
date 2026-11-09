@@ -14,10 +14,13 @@
 		}
 	],
 	"runtime": {
-		"type": "node18",
+		"type": "node26",
 		"api": "nodejs-ipc",
 		"apiVersion": "0.0.0",
-		"entrypoint": "../dist/main.js"
+		"entrypoint": "../dist/main.js",
+		"permissions": {
+			"child-process": true
+		}
 	},
 	"legacyIds": ["F4", "F4Lite", "F8"],
 	"manufacturer": "Pixelhue",
